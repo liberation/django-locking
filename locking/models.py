@@ -24,11 +24,11 @@ class LockableModel(models.Model):
     class Meta:
         abstract = True
         
-    _locked_at = models.DateTimeField(db_column='locked_at', 
+    _locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"), 
         null=True,
         editable=False)
     _locked_by = models.ForeignKey(auth.User, 
-        db_column='locked_by',
+        db_column=getattr(settings, "LOCKED_BY_DB_FIELD_NAME", "checked_by"),
         related_name="working_on_%(class)s",
         null=True,
         editable=False)
