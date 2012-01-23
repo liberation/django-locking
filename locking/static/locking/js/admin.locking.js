@@ -91,7 +91,8 @@ locking.admin = function() {
 			warn: gettext('Your lock on this page expires in less than %s' +
 				' minutes. Press save or <a href=".">reload the page</a>.'),
 			is_locked: gettext('This page is locked by <em>%(for_user)s' + 
-				'</em> and editing is disabled.'),
+				'</em> and editing is disabled. ' +
+				'Ask him/her to release the lock and then try <a href=".">reloading the page</a>.'),
 			has_expired: gettext('Your lock on this page is expired!' + 
 				' Saving your changes might not be possible, ' + 
 				' but you are welcome to try.'
