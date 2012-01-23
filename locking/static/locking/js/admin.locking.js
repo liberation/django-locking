@@ -135,8 +135,9 @@ locking.admin = function() {
 		
 		// Disables all form elements.
 		var disable_form = function() {
-			$(":input[disabled]").addClass('_locking_initially_disabled');
-			$(":input").attr("disabled", "disabled");
+            var change_form = $('#' + locking.infos.change_form_id)
+            $(":input[disabled]", change_form).addClass('_locking_initially_disabled');
+            $(":input", change_form).attr("disabled", "disabled");
 		};
 		
 		// Enables all form elements that was not disabled from the start.
