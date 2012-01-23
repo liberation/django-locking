@@ -161,20 +161,26 @@ locking.admin = function() {
 			});
 		};
 
+        var remove_ajax_unload = function() {
+            $(window).unbind('beforeunload', request_unlock);
+        }
+
         // Analyse locking_info and disable form if necessary
         var lock_if_necessary = function() {
             if (locking.infos.applies) {
                 disable_form();
                 display_islocked(locking.infos);
-            } else {
-                // page is not locked for user
+            } else { // page is not locked for user
                 // Warn if locking wiil expire if he stays too long...
 				locking.delay_execution([
 					[display_warning, settings.time_until_warning], 
 					[expire_page, settings.time_until_expiration]
 				]);
-                // ...and unlock page when user leaves the page
+                // Unlock page when user leaves the page without saving
         		$(window).bind('beforeunload', request_unlock);
+        		// If user is saving, don't ask for unlocking, it will
+        		// be done python-ly
+        		$('#' + locking.infos.change_form_id).bind('submit', remove_ajax_unload)
             }
         }
 		
