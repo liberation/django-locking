@@ -150,71 +150,37 @@ locking.admin = function() {
 			update_notification_area(text.has_expired);
 		};
 		
-		// Request a lock on the page, and unlocks page when the user leaves.
-		// Adds delayed execution of user notifications.
-		var lock_page = function() {
-			var request_lock = function() {
-				var parse_request_lock_responce = function(jqXHR, textStatus) {
-					// TODO: It seems ugly to use response codes like this, it
-					// should be allowed (i.e. not 403) to ask if an object is
-					// locked. Return a json object instead. 
-					if (jqXHR.status === 403) {
-						display_islocked();
-						return;
-					} else if (jqXHR.status === 200) {
-						enable_form();
-						locking.delay_execution([
-							[display_warning, settings.time_until_warning], 
-							[expire_page, settings.time_until_expiration]
-						]);
-					} else {
-						locking.error();
-					}
-				};
-				$.ajax({
-					url: urls.lock,
-					complete: parse_request_lock_responce,
-					cache: false
-				});
-			};
-			var request_unlock = function() {
-				// We have to assure that our unlock request actually gets
-				// through before the user leaves the page, so it shouldn't
-				// run asynchronously.
-				$.ajax({
-					url: urls.unlock,
-					async: false,
-					cache: false
-				});
-			};
-			request_lock();
-			$(window).unload(request_unlock);
-		};
-		
-		// The server gave us locking info. Either lock or keep it unlocked
-		// while showing notification.
-		var parse_succesful_request = function(data, textStatus, jqXHR) {
-			if (!data.applies) {
-				lock_page();
-			} else {
-				display_islocked(data);
-			}
-		};
-		
-		// Polls server for the page lock status.
-		var request_locking_info = function() {
+		var request_unlock = function() {
+			// We have to assure that our unlock request actually gets
+			// through before the user leaves the page, so it shouldn't
+			// run asynchronously.
 			$.ajax({
-				url: urls.is_locked,
-				success: parse_succesful_request,
-				error: locking.error,
+				url: urls.unlock,
+				async: false,
 				cache: false
 			});
 		};
+
+        // Analyse locking_info and disable form if necessary
+        var lock_if_necessary = function() {
+            if (locking.infos.applies) {
+                disable_form();
+                display_islocked(locking.infos);
+            } else {
+                // page is not locked for user
+                // Warn if locking wiil expire if he stays too long...
+				locking.delay_execution([
+					[display_warning, settings.time_until_warning], 
+					[expire_page, settings.time_until_expiration]
+				]);
+                // ...and unlock page when user leaves the page
+        		$(window).bind('beforeunload', request_unlock);
+            }
+        }
 		
 		// Initialize.
-		disable_form();
 		create_notification_area();
-		request_locking_info();
+		lock_if_necessary();
 		
 	} catch(err) {
 		locking.error();
