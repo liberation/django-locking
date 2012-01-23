@@ -3,6 +3,7 @@
 from django.conf import settings
 from django import template
 from django.utils import simplejson as json
+from django.utils.html import escape
 
 register = template.Library()
     
@@ -26,7 +27,7 @@ def locking_variables(context):
         request = context['request']
         locking_infos = {
             "is_active": original.is_locked,
-            "for_user": getattr(original.locked_by, 'username', None),
+            "for_user": escape(getattr(original.locked_by, 'username', '')),
             "applies": original.lock_applies_to(request.user),
             "change_form_id": "%s_form" % (original._meta.module_name,)
         }
