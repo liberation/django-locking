@@ -1,6 +1,8 @@
 # coding=utf8
 from datetime import datetime
+
 from django.db import models
+from django.db.models.expressions import ExpressionNode
 from django.contrib.auth import models as auth
 from django.conf import settings
 from locking import logger
@@ -16,10 +18,6 @@ class LockableModel(models.Model):
     objects = managers.Manager()
     locked = managers.LockedManager()
     unlocked = managers.UnlockedManager()
-
-    def __init__(self, *vargs, **kwargs):
-        super(LockableModel, self).__init__(*vargs, **kwargs)
-        self._state.locking = False
 
     class Meta:
         abstract = True
@@ -109,13 +107,12 @@ class LockableModel(models.Model):
             raise ObjectLockedError("This object is already locked by another user. \
                 May not override, except through the `unlock` method.")
         else:
-            self._locked_at = datetime.today()
-            self._locked_by = user
-            self._hard_lock = self.__init_hard_lock = hard_lock
-            date = self.locked_at.strftime("%H:%M:%S")
-            # an administrative toggle, to make it easier for devs to extend `django-locking`
-            # and react to locking and unlocking
-            self._state.locking = True
+            update(
+                self,
+                _locked_at=datetime.today(),
+                _locked_by=user,
+                _hard_lock=hard_lock,
+            )
             logger.info("Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
 
     def unlock(self):
@@ -124,10 +121,12 @@ class LockableModel(models.Model):
         to do manual lock overrides, even if they haven't initiated these
         locks themselves. Otherwise, use ``unlock_for``.
         """
-        self._locked_at = self._locked_by = None
-        # an administrative toggle, to make it easier for devs to extend `django-locking`
-        # and react to locking and unlocking
-        self._state.locking = True
+        update(
+            self,
+            _locked_at=None,
+            _locked_by=None,
+            _hard_lock=False,
+        )
         logger.info("Disengaged lock on `%s`" % self)
     
     def unlock_for(self, user):
@@ -172,12 +171,28 @@ class LockableModel(models.Model):
         return user == self.locked_by
     
     def save(self, *vargs, **kwargs):
-        if self.lock_type == 'hard' and not self.__init_hard_lock:
+        if self.lock_type == 'hard':
             raise ObjectLockedError("""There is currently a hard lock in place. You may not save.
             If you're requesting this save in order to unlock this object for the user who
             initiated the lock, make sure to call `unlock_for` first, with the user as
             the argument.""")
-        self.__init_hard_lock = False
         
         super(LockableModel, self).save(*vargs, **kwargs)
-        self._state.locking = False
+
+def update(obj, using=None, **kwargs):
+    # Adapted from http://www.slideshare.net/zeeg/djangocon-2010-scaling-disqus
+    """
+    Updates specified attributes on the current instance.
+
+    This creates an atomic query, circumventing some possible race conditions.
+    """
+    assert obj, "Instance has not yet been created."
+    obj.__class__._base_manager.using(using)\
+            .filter(pk=obj.pk)\
+            .update(**kwargs)
+
+    for k, v in kwargs.items():
+        if isinstance(v, ExpressionNode):
+            # Not implemented.
+            continue
+        setattr(obj, k, v)
