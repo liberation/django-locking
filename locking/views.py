@@ -1,6 +1,8 @@
 import simplejson
 from django.http import HttpResponse
 from django.conf import settings
+from django.utils import formats
+
 from locking.decorators import user_may_change_model, is_lockable, log
 from locking import utils, models
 
@@ -18,12 +20,36 @@ def lock(request, app, model, id):
     try:
         obj.lock_for(request.user)
         obj._is_a_locking_request = True
-        obj.save()
         return HttpResponse(status=200)
     except models.ObjectLockedError:
         # The user tried to overwrite an existing lock by another user.
         # No can do, pal!
         return HttpResponse(status=403)
+
+@log
+@user_may_change_model
+@is_lockable
+def refresh_lock(request, app, model, id):
+    obj = utils.gather_lockable_models()[app][model].objects.get(pk=id)
+
+    try:
+        obj.lock_for(request.user)
+    except models.ObjectLockedError:
+        # The user tried to overwrite an existing lock by another user.
+        # No can do, pal!
+        return HttpResponse(status=409)  # Conflict
+
+    # Format date like a DateTimeInput would have done
+    format = formats.get_format('DATETIME_INPUT_FORMATS')[0]
+    original_locked_at = obj.locked_at.strftime(format)
+    original_modified_at = obj.modified_at.strftime(format)
+
+    response = simplejson.dumps({
+        'original_locked_at': original_locked_at,
+        'original_modified_at': original_modified_at,
+    })
+
+    return HttpResponse(response, mimetype="application/json")
 
 @log
 @user_may_change_model
@@ -41,7 +67,6 @@ def unlock(request, app, model, id):
     try:
         obj.unlock_for(request.user)
         obj._is_a_locking_request = True
-        obj.save()    
         return HttpResponse(status=200)
     except models.ObjectLockedError:
         return HttpResponse(status=403)

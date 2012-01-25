@@ -5,6 +5,7 @@ urlpatterns = patterns('locking.views',
     (r'(?P<app>[\w-]+)/(?P<model>[\w-]+)/(?P<id>\d+)/lock/$', 'lock'),
     (r'(?P<app>[\w-]+)/(?P<model>[\w-]+)/(?P<id>\d+)/unlock/$', 'unlock'),
     (r'(?P<app>[\w-]+)/(?P<model>[\w-]+)/(?P<id>\d+)/is_locked/$', 'is_locked'),
+    (r'(?P<app>[\w-]+)/(?P<model>[\w-]+)/(?P<id>\d+)/refresh_lock/$', 'refresh_lock'),
     (r'_variables\.js$', 'js_variables', {}, 'locking_variables'),
     )
 

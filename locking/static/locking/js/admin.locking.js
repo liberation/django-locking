@@ -84,7 +84,8 @@ locking.admin = function() {
 		var urls = {
 			is_locked: base_url + "/is_locked/",
 			lock: base_url + "/lock/",
-			unlock: base_url + "/unlock/"
+			unlock: base_url + "/unlock/",
+			refresh_lock: base_url + "/refresh_lock/"
 		};
 		// Texts.
 		var text = {
@@ -96,6 +97,10 @@ locking.admin = function() {
 			has_expired: gettext('Your lock on this page is expired!' + 
 				' Saving your changes might not be possible, ' + 
 				' but you are welcome to try.'
+			),
+			was_already_locked: gettext('It appears that you were already editing' + 
+				' this page (maybe in another tab or window ?). If you think this is' + 
+				' a mistake, you can choose to <a href="#force-release" class="force-release">force-release the lock</a>.'
 			),
 			prompt_to_save: 'Do you wish to save the page?',
 		};
@@ -134,8 +139,15 @@ locking.admin = function() {
 			update_notification_area(interpolate(text.is_locked, data, true));
 		};
 		
+		// Displays notice on top of page that the page was already locked by
+		// current user
+		var display_wasalreadylocked = function(data) {
+			update_notification_area(interpolate(text.was_already_locked, data, true));
+		};
+		
 		// Disables all form elements.
 		var disable_form = function() {
+		    console.log('disable form');
             var change_form = $('#' + locking.infos.change_form_id)
             $(":input[disabled]", change_form).addClass('_locking_initially_disabled');
             $(":input", change_form).attr("disabled", "disabled");
@@ -167,13 +179,8 @@ locking.admin = function() {
             $(window).unbind('beforeunload', request_unlock);
         }
 
-        // Analyse locking_info and disable form if necessary
-        var lock_if_necessary = function() {
-            if (locking.infos.applies) {
-                disable_form();
-                display_islocked(locking.infos);
-            } else { // page is not locked for user
-                // Warn if locking wiil expire if he stays too long...
+        var initialize_edit_mode = function() {
+                // Warn that lock will expire if he stays too long...
 				locking.delay_execution([
 					[display_warning, settings.time_until_warning], 
 					[expire_page, settings.time_until_expiration]
@@ -183,6 +190,49 @@ locking.admin = function() {
         		// If user is saving, don't ask for unlocking, it will
         		// be done python-ly
         		$('#' + locking.infos.change_form_id).bind('submit', remove_ajax_unload)
+        }
+
+        var request_refresh_lock = function() {
+			var parse_refresh_lock_response = function(data, textStatus, jqXHR) {
+				if (jqXHR.status === 409) {
+					alert("Unable to unlock the object, it is already locked by someone else !");
+					return;
+				} else if (jqXHR.status === 200) {
+                    $('input[name="original_locked_at"]').attr("value", data.original_locked_at);
+                    $('input[name="original_modified_at"]').attr("value", data.original_modified_at);
+                    initialize_edit_mode();
+					enable_form();
+                    update_notification_area('');
+				} else {
+					locking.error();
+				}
+			};
+			$.ajax({
+				url: urls.refresh_lock,
+				success: parse_refresh_lock_response,
+				cache: false,
+				error: locking.error
+			});
+		};
+
+
+        // Analyse locking_info and disable form if necessary
+        var lock_if_necessary = function() {
+            if (locking.infos.was_already_locked_by_user) {
+                // An active lock by this user was found when loading the page.
+                // Disable form, warn him and allow him to ignore the old lock
+                $('body').delegate('a.force-release', 'click', function(e) {  
+                    request_refresh_lock();
+                    return false;
+                });
+                disable_form();
+                display_wasalreadylocked(locking.infos);
+            }
+            else if (locking.infos.applies) {
+                disable_form();
+                display_islocked(locking.infos);
+            } else { // page is not locked for user
+                initialize_edit_mode();
             }
         }
 		

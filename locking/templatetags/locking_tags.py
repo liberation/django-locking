@@ -29,7 +29,8 @@ def locking_variables(context):
             "is_active": original.is_locked,
             "for_user": escape(getattr(original.locked_by, 'username', '')),
             "applies": original.lock_applies_to(request.user),
-            "change_form_id": "%s_form" % (original._meta.module_name,)
+            "change_form_id": "%s_form" % (original._meta.module_name,),
+            "was_already_locked_by_user": getattr(original, '_was_already_locked_by_user', False)
         }
 
     data = {

@@ -20,24 +20,19 @@ class LockableAdmin(admin.ModelAdmin):
         self.request = request
         return super(LockableAdmin, self).changelist_view(request, extra_context)
 
-    def render_change_form(self, request, context, add=False, change=False, form_url='', obj=None):
-        """
-        If we are in change view, try to lock ``obj``.
-        """
-        if change:
-            if not obj.lock_applies_to(request.user):
-                # obj is not locked or has been locked by current user
-                obj.lock_for(request.user)
-                obj.save()  # FIXME Use update!
-                
-        return super(LockableAdmin, self).render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
-
     def save_model(self, request, obj, form, change, *args, **kwargs):
         # object creation doesn't need/have locking in place
         if obj.pk:
             obj.unlock_for(request.user)
         super(LockableAdmin, self).save_model(request, obj, form, change, *args, 
                                           **kwargs)
+
+    def get_object(self, request, object_id):
+        obj = super(LockableAdmin, self).get_object(request, object_id)
+        if obj is not None:
+            obj._request_user = request.user
+
+        return obj
 
     def lock(self, obj):
         if obj.is_locked:
