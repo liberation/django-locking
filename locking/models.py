@@ -11,14 +11,10 @@ import managers
 class ObjectLockedError(IOError):
     pass
 
-class LockableModel(models.Model):
-    """ LockableModel comes with three managers: ``objects``, ``locked`` and 
-    ``unlocked``. They do what you'd expect them to. """
-
-    objects = managers.Manager()
-    locked = managers.LockedManager()
-    unlocked = managers.UnlockedManager()
-
+class LockableModelFieldsMixin(models.Model):
+    """
+    Mixin that holds all fields of final class LockableModel.
+    """
     class Meta:
         abstract = True
         
@@ -31,7 +27,17 @@ class LockableModel(models.Model):
         null=True,
         editable=False)
     _hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
-    
+
+class LockableModelMethodsMixin(models.Model):
+    """
+    Mixin that holds all methods of final class LockableModel.
+
+    Inherit directly from this class (instead of LockableModel) if you want
+    to declare your locking fields with custom options (on_delete, blank, etc.).
+    """
+    class Meta:
+        abstract = True
+
     # We don't want end-developers to manipulate database fields directly, 
     # hence we're putting these behind simple getters.
     # End-developers should use functionality like the lock_for method instead.
@@ -177,7 +183,21 @@ class LockableModel(models.Model):
             initiated the lock, make sure to call `unlock_for` first, with the user as
             the argument.""")
         
-        super(LockableModel, self).save(*vargs, **kwargs)
+        super(LockableModelMethodsMixin, self).save(*vargs, **kwargs)
+
+
+
+class LockableModel(LockableModelFieldsMixin, LockableModelMethodsMixin):
+    """ LockableModel comes with three managers: ``objects``, ``locked`` and 
+    ``unlocked``. They do what you'd expect them to. """
+
+    objects = managers.Manager()
+    locked = managers.LockedManager()
+    unlocked = managers.UnlockedManager()
+
+    class Meta:
+        abstract = True
+    
 
 def update(obj, using=None, **kwargs):
     # Adapted from http://www.slideshare.net/zeeg/djangocon-2010-scaling-disqus
