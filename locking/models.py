@@ -27,6 +27,11 @@ class LockableModelFieldsMixin(models.Model):
         null=True,
         editable=False)
     _hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
+    _modified_at = models.DateTimeField(
+        auto_now=True,
+        editable=False,
+        db_column=getattr(settings, "MODIFIED_AT_DB_FIELD_NAME", "modified_at")
+    )
 
 class LockableModelMethodsMixin(models.Model):
     """
@@ -45,12 +50,16 @@ class LockableModelMethodsMixin(models.Model):
     def locked_at(self):
         """A simple ``DateTimeField`` that is the heart of the locking mechanism. Read-only."""
         return self._locked_at
-    
+
     @property
     def locked_by(self):
         """``locked_by`` is a foreign key to ``auth.User``. The ``related_name`` on the 
         User object is ``working_on_%(class)s``. Read-only."""
         return self._locked_by
+    
+    @property
+    def modified_at(self):
+        return self._modified_at
     
     @property
     def lock_type(self):
