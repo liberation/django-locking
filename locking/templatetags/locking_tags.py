@@ -14,6 +14,7 @@ def locking_variables(context):
     enable locking management at the client level.
     """
     locking_infos = {}
+    locking_error_when_saving = {}
     locking_settings = {
         'base_url': '/ajax/admin',  # FIXME don't harcode base URL !
         'time_until_expiration': settings.LOCKING['time_until_expiration'],
@@ -25,13 +26,20 @@ def locking_variables(context):
         # (disable form, display "is locked" message, etc.) at the client level
         original = context['original']
         request = context['request']
+        is_POST_response = request.method == 'POST'
         locking_infos = {
             "is_active": original.is_locked,
             "for_user": escape(getattr(original.locked_by, 'username', '')),
             "applies": original.lock_applies_to(request.user),
             "change_form_id": "%s_form" % (original._meta.module_name,),
-            "was_already_locked_by_user": getattr(original, '_was_already_locked_by_user', False)
+            "was_already_locked_by_user": getattr(original, '_was_already_locked_by_user', False),
+            "is_POST_response": request.method == 'POST',
+            "error_when_saving": None
         }
+        # If we are responding after a POST, export locking errors if any
+        model_form  = context['adminform'].form
+        if is_POST_response:
+            locking_infos["error_when_saving"] = getattr(model_form, '_locking_error_when_saving', None)
 
     data = {
         'locking_settings': json.dumps(locking_settings),

@@ -94,6 +94,8 @@ locking.admin = function() {
 			is_locked: gettext('This page is locked by <em>%(for_user)s' + 
 				'</em> and editing is disabled. ' +
 				'Ask him/her to release the lock and then try <a href=".">reloading the page</a>.'),
+			editing: gettext('You are in edit mode.'
+            ),
 			has_expired: gettext('Your lock on this page is expired!' + 
 				' Saving your changes might not be possible, ' + 
 				' but you are welcome to try.'
@@ -101,14 +103,38 @@ locking.admin = function() {
 			was_already_locked: gettext('It appears that you were already editing' + 
 				' this page (maybe in another tab or window ?). If you think this is' + 
 				' a mistake, you can choose to <a href="#force-release" class="force-release">force-release the lock</a>.'
-			),
+			),			
 			prompt_to_save: 'Do you wish to save the page?',
 		};
+
+        var errors_when_saving = {
+			was_already_locked: gettext('It appears that you were already editing' + 
+				' this page (maybe in another tab or window ?). If you think this is' + 
+				' a mistake, you can choose to <a href="#force-save" class="force-save">force saving</a>.'
+			),
+			not_locked_and_modified: gettext('It appears that object was modified since you' + 
+				' extracted it. You can choose to <a href="#force-save" class="force-save">force saving</a>' +
+				' but you may override some changes...'
+			),
+			locked_by_someone_else: gettext('%s is editing this object !' +
+			' Before saving, you need to ask him/her to release the lock. Note that if' +
+			' he/she saves, conflicts may happen.'
+            ),
+        }
 		
 		// Creates empty div in top of page.
 		var create_notification_area = function() {
 			$("#content-main").prepend(
 				'<div id="locking_notification"></div>');
+		};
+		
+		// Creates errornote div in top of page if it doesn't already exist
+		var create_warning_area = function() {
+            var change_form = $('#' + locking.infos.change_form_id);
+            var errornote = $('.errornote', change_form);
+            if (errornote.length === 0) {
+                $('<p class="errornote"></p>').prependTo(change_form).hide();
+            }
 		};
 		
 		// Scrolls to the top, updates content of notification area and fades
@@ -117,6 +143,15 @@ locking.admin = function() {
 			$('html, body').scrollTop(0);
 			$("#content-main #locking_notification").html(content).hide()
 				                                    .fadeIn('slow', func);
+		};
+
+		var update_warning_area = function(content) {
+            var errornote = $('.errornote');
+            var lastErrorElm = errornote.siblings(".errorlist");
+            if (lastErrorElm.length === 0) {
+                lastErrorElm = errornote;
+            }
+			$('<ul class="errorlist"></ul>').html('<li>' + content + '</li>').insertAfter(lastErrorElm);
 		};
 		
 		// Displays a warning that the page is about to expire.
@@ -180,6 +215,8 @@ locking.admin = function() {
         }
 
         var initialize_edit_mode = function() {
+                update_notification_area(interpolate(text.editing, [locking.infos.original_locked_at]));
+
                 // Warn that lock will expire if he stays too long...
 				locking.delay_execution([
 					[display_warning, settings.time_until_warning], 
@@ -192,7 +229,7 @@ locking.admin = function() {
         		$('#' + locking.infos.change_form_id).bind('submit', remove_ajax_unload)
         }
 
-        var request_refresh_lock = function() {
+        var request_refresh_lock = function(force_save) {
 			var parse_refresh_lock_response = function(data, textStatus, jqXHR) {
 				if (jqXHR.status === 409) {
 					alert("Unable to unlock the object, it is already locked by someone else !");
@@ -200,9 +237,14 @@ locking.admin = function() {
 				} else if (jqXHR.status === 200) {
                     $('input[name="original_locked_at"]').attr("value", data.original_locked_at);
                     $('input[name="original_modified_at"]').attr("value", data.original_modified_at);
-                    initialize_edit_mode();
-					enable_form();
-                    update_notification_area('');
+                    if (force_save) {
+                        $('form input[type=submit][name=_continue]').click();
+                    } else {
+                        // force_save is not asked, just enable form
+                        initialize_edit_mode();
+    					enable_form();
+                        update_notification_area(text.editing);
+                    }
 				} else {
 					locking.error();
 				}
@@ -218,14 +260,26 @@ locking.admin = function() {
 
         // Analyse locking_info and disable form if necessary
         var lock_if_necessary = function() {
-            if (locking.infos.was_already_locked_by_user) {
+            if (locking.infos.is_POST_response && locking.infos.error_when_saving) {
+                // User tried to save but there was a locking problem
+                // We then assume it was editing the page, so display error
+                // and enable form
+                $('body').delegate('a.force-save', 'click', function(e) {
+                    force_save = true;
+                    request_refresh_lock(force_save);
+                    return false;
+                });
+    			update_warning_area(interpolate(errors_when_saving[locking.infos.error_when_saving], [locking.infos.for_user]));
+                initialize_edit_mode();
+            }
+            else if (locking.infos.was_already_locked_by_user) {
                 // An active lock by this user was found when loading the page.
                 // Disable form, warn him and allow him to ignore the old lock
+                disable_form();
                 $('body').delegate('a.force-release', 'click', function(e) {  
                     request_refresh_lock();
                     return false;
                 });
-                disable_form();
                 display_wasalreadylocked(locking.infos);
             }
             else if (locking.infos.applies) {
@@ -238,6 +292,7 @@ locking.admin = function() {
 		
 		// Initialize.
 		create_notification_area();
+		create_warning_area();
 		lock_if_necessary();
 		
 	} catch(err) {
