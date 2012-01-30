@@ -16,7 +16,6 @@ def locking_variables(context):
     locking_infos = {}
     locking_error_when_saving = {}
     locking_settings = {
-        'base_url': '/ajax/admin',  # FIXME don't harcode base URL !
         'time_until_expiration': settings.LOCKING['time_until_expiration'],
         'time_until_warning': settings.LOCKING['time_until_warning'],
     }

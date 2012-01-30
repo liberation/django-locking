@@ -75,12 +75,13 @@ locking.admin = function() {
 		if (is_adding_content()) return;
 		
 		// Get url parts.
+		var adminSite = $.url.segment(0)
 		var app = $.url.segment(1);
 		var model = $.url.segment(2);
 		var id = $.url.segment(3);
 		
 		// Urls.
-		var base_url = settings.base_url + "/" + [app, model, id].join("/");
+		var base_url = "/" + [adminSite, app, model, id].join("/");
 		var urls = {
 			unlock: base_url + "/unlock/",
 			refresh_lock: base_url + "/refresh_lock/"
