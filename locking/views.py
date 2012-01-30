@@ -30,7 +30,6 @@ def lock(request, app, model, id):
 @user_may_change_model
 @is_lockable
 def refresh_lock(request, app, model, id):
-    print "LOOOOOOL"
     obj = utils.gather_lockable_models()[app][model].objects.get(pk=id)
 
     try:
