@@ -10,22 +10,6 @@ from locking import utils, models
 These views are called from javascript to open and close assets (objects), in order
 to prevent concurrent editing.
 """
-
-@log
-@user_may_change_model
-@is_lockable
-def lock(request, app, model, id):
-    obj = utils.gather_lockable_models()[app][model].objects.get(pk=id)
-
-    try:
-        obj.lock_for(request.user)
-        obj._is_a_locking_request = True
-        return HttpResponse(status=200)
-    except models.ObjectLockedError:
-        # The user tried to overwrite an existing lock by another user.
-        # No can do, pal!
-        return HttpResponse(status=403)
-
 @log
 @user_may_change_model
 @is_lockable
@@ -70,25 +54,3 @@ def unlock(request, app, model, id):
         return HttpResponse(status=200)
     except models.ObjectLockedError:
         return HttpResponse(status=403)
-
-@log
-@user_may_change_model
-@is_lockable
-def is_locked(request, app, model, id):
-    obj = utils.gather_lockable_models()[app][model].objects.get(pk=id)
-    response = simplejson.dumps({
-        "is_active": obj.is_locked,
-        "for_user": getattr(obj.locked_by, 'username', None),
-        "applies": obj.lock_applies_to(request.user),
-        })
-    return HttpResponse(response, mimetype='application/json')
-
-@log
-def js_variables(request):
-    response = "var locking = locking || {}; locking.settings = %s" % ( 
-        simplejson.dumps({
-            'base_url': "/".join(request.path.split('/')[:-1]),
-            'time_until_expiration': settings.LOCKING['time_until_expiration'],
-            'time_until_warning': settings.LOCKING['time_until_warning'],
-        }))
-    return HttpResponse(response, mimetype='application/javascript')
