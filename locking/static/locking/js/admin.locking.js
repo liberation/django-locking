@@ -82,8 +82,6 @@ locking.admin = function() {
 		// Urls.
 		var base_url = settings.base_url + "/" + [app, model, id].join("/");
 		var urls = {
-			is_locked: base_url + "/is_locked/",
-			lock: base_url + "/lock/",
 			unlock: base_url + "/unlock/",
 			refresh_lock: base_url + "/refresh_lock/"
 		};
