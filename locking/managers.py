@@ -9,9 +9,9 @@ def point_of_timeout():
 class LockedManager(Manager):
     def get_query_set(self):
         timeout = point_of_timeout()
-        return super(LockedManager, self).get_query_set().filter(_locked_at__gt=timeout, _locked_at__isnull=False)
+        return super(LockedManager, self).get_query_set().filter(locked_at__gt=timeout, locked_at__isnull=False)
 
 class UnlockedManager(Manager):
     def get_query_set(self):
         timeout = point_of_timeout()
-        return super(UnlockedManager, self).get_query_set().filter(Q(_locked_at__lte=timeout) | Q(_locked_at__isnull=True))
+        return super(UnlockedManager, self).get_query_set().filter(Q(locked_at__lte=timeout) | Q(locked_at__isnull=True))

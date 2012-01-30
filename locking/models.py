@@ -1,4 +1,4 @@
-# coding=utf8
+    # coding=utf8
 from datetime import datetime
 
 from django.db import models
@@ -18,16 +18,16 @@ class LockableModelFieldsMixin(models.Model):
     class Meta:
         abstract = True
         
-    _locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"), 
+    locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"), 
         null=True,
         editable=False)
-    _locked_by = models.ForeignKey(auth.User, 
+    locked_by = models.ForeignKey(auth.User, 
         db_column=getattr(settings, "LOCKED_BY_DB_FIELD_NAME", "checked_by"),
         related_name="working_on_%(class)s",
         null=True,
         editable=False)
-    _hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
-    _modified_at = models.DateTimeField(
+    hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
+    modified_at = models.DateTimeField(
         auto_now=True,
         editable=False,
         db_column=getattr(settings, "MODIFIED_AT_DB_FIELD_NAME", "modified_at")
@@ -42,31 +42,13 @@ class LockableModelMethodsMixin(models.Model):
     """
     class Meta:
         abstract = True
-
-    # We don't want end-developers to manipulate database fields directly, 
-    # hence we're putting these behind simple getters.
-    # End-developers should use functionality like the lock_for method instead.
-    @property
-    def locked_at(self):
-        """A simple ``DateTimeField`` that is the heart of the locking mechanism. Read-only."""
-        return self._locked_at
-
-    @property
-    def locked_by(self):
-        """``locked_by`` is a foreign key to ``auth.User``. The ``related_name`` on the 
-        User object is ``working_on_%(class)s``. Read-only."""
-        return self._locked_by
-    
-    @property
-    def modified_at(self):
-        return self._modified_at
     
     @property
     def lock_type(self):
         """ Returns the type of lock that is currently active. Either
         ``hard``, ``soft`` or ``None``. Read-only. """
         if self.is_locked:
-            if self._hard_lock:
+            if self.hard_lock:
                 return "hard"
             else:
                 return "soft"
@@ -124,9 +106,9 @@ class LockableModelMethodsMixin(models.Model):
         else:
             update(
                 self,
-                _locked_at=datetime.today(),
-                _locked_by=user,
-                _hard_lock=hard_lock,
+                locked_at=datetime.today(),
+                locked_by=user,
+                hard_lock=hard_lock,
             )
             logger.info("Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
 
@@ -138,9 +120,9 @@ class LockableModelMethodsMixin(models.Model):
         """
         update(
             self,
-            _locked_at=None,
-            _locked_by=None,
-            _hard_lock=False,
+            locked_at=None,
+            locked_by=None,
+            hard_lock=False,
         )
         logger.info("Disengaged lock on `%s`" % self)
     
