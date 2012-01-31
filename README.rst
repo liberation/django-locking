@@ -22,5 +22,4 @@ Installation
     - Specify locking.admin.LockableAdmin as a ModelAdmin base class.
     - Specify locking.forms.LockableForm as a base class of the ModelAdmin.form.
     - Add `original_locked_at` and `original_modified_at` to ModelAdmin.fields.
-- Call {% locking_variables %} in the change_form.html (or in a parent), *before*
-calls to locking JavaScript calls.
+- Call {% locking_variables %} in the change_form.html (or in a parent), *before* calls to locking JavaScript calls.
