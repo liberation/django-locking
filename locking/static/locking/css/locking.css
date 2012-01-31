@@ -7,3 +7,10 @@
 	display: none;
 	width: 510px;
 }
+
+/* Hide fields original_modified_at and original_locked_at, they are
+for internal use. Hide them through CSS, since it's not possible through
+the ModelAdmin */
+div.original_locked_at, div.original_modified_at {
+    display: none;
+}
