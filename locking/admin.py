@@ -4,8 +4,8 @@ from datetime import datetime
 from django.conf.urls.defaults import patterns, url
 from django.contrib import admin
 from django.conf import settings
-from django.utils.translation import ugettext as _
-from django.contrib.admin.util import unquote
+from django.utils.translation import ugettext_lazy, ugettext as _
+from django.contrib.admin.util import unquote, model_ngettext
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.utils import formats
@@ -22,6 +22,44 @@ class LockableAdmin(admin.ModelAdmin):
               'locking/js/admin.locking.js',
               'locking/js/jquery.url.packed.js',
              )
+
+    def unlock_user_locked_content(self, request, queryset):
+        """
+        Try to unlock all objects in the queryset. Only objects
+        locked by current user will be unlocked.
+        """
+        n_done = 0
+        n_error = 0
+        for obj in queryset:
+            try:
+                obj.unlock_for(request.user)
+                n_done += 1
+            except ObjectLockedError:
+                n_error += 1
+
+        self.message_user(request, _("Successfully unlocked %(n_done)d %(items_done)s. %(n_error)d %(items_error)s were unlockable by yourself. ") % {
+            "n_done": n_done, "items_done": model_ngettext(self.opts, n_done), "n_error": n_error, "items_error": model_ngettext(self.opts, n_error)
+        })
+
+    unlock_user_locked_content.short_description = ugettext_lazy("Unlock selected %(verbose_name_plural)s")
+
+    def force_unlock(self, request, queryset):
+        """
+        Force unlocking all objects in `queryset`.
+
+        Intended for admin use.
+        """
+        for obj in queryset:
+            obj.unlock()
+
+        n = queryset.count()
+
+        if n:
+            self.message_user(request, _("Successfully unlocked %(count)d %(items)s.") % {
+                "count": n, "items": model_ngettext(self.opts, n)
+            })
+
+    force_unlock.short_description = ugettext_lazy("Force unlocking selected %(verbose_name_plural)s")
 
     def unlock_view(self, request, object_id, extra_context=None):
         obj = self.get_object(request, unquote(object_id))
