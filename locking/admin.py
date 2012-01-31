@@ -23,32 +23,15 @@ class LockableAdmin(admin.ModelAdmin):
               'locking/js/jquery.url.packed.js',
              )
 
-    def unlock_locked_by_user(self, request, queryset):
-        """
-        Try to unlock all objects in the queryset. Only objects
-        locked by current user will be unlocked.
-        """
-        n_done = 0
-        n_error = 0
-        for obj in queryset:
-            try:
-                obj.unlock_for(request.user)
-                n_done += 1
-            except ObjectLockedError:
-                n_error += 1
-
-        self.message_user(request, _("Successfully unlocked %(n_done)d %(items_done)s. %(n_error)d %(items_error)s were unlockable by yourself. ") % {
-            "n_done": n_done, "items_done": model_ngettext(self.opts, n_done), "n_error": n_error, "items_error": model_ngettext(self.opts, n_error)
-        })
-
-    unlock_locked_by_user.short_description = ugettext_lazy("Unlock selected %(verbose_name_plural)s")
-
     def force_unlock(self, request, queryset):
         """
-        Force unlocking all objects in `queryset`.
+        Admin action to force unlocking all objects in `queryset`.
 
-        Intended for admin use.
+        Intended for superusers.
         """
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+
         for obj in queryset:
             obj.unlock()
 
