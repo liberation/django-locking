@@ -23,7 +23,7 @@ class LockableAdmin(admin.ModelAdmin):
               'locking/js/jquery.url.packed.js',
              )
 
-    def unlock_user_locked_content(self, request, queryset):
+    def unlock_locked_by_user(self, request, queryset):
         """
         Try to unlock all objects in the queryset. Only objects
         locked by current user will be unlocked.
@@ -41,7 +41,7 @@ class LockableAdmin(admin.ModelAdmin):
             "n_done": n_done, "items_done": model_ngettext(self.opts, n_done), "n_error": n_error, "items_error": model_ngettext(self.opts, n_error)
         })
 
-    unlock_user_locked_content.short_description = ugettext_lazy("Unlock selected %(verbose_name_plural)s")
+    unlock_locked_by_user.short_description = ugettext_lazy("Unlock selected %(verbose_name_plural)s")
 
     def force_unlock(self, request, queryset):
         """
