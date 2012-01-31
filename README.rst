@@ -1,36 +1,25 @@
+WARNING: WORK IN PROGRESS
+
 About this fork
 ===============
 
-This fork adds numerous improvements to the admin integration of django-locking.
-These improvements entails:
+Far more intrusive, this fork aims to be lighter and to do less HTTP and DB requests:
+- Locking is no longer done through AJAX, it's done directly in admin.py
+- JavaScript vars are exported through a template tag, and not through
+a JS call to a dynamic view.
+- Views are included directly in LockableAdmin (through get_url()), there is
+no longer need for custom decorators (to perform permission checks) nor
+utils (to fetch lockable models...)
 
-- It actually works.
-- Media is included correctly.
-- Adds new settings for specifying the timing of the locks.
-- Warns the user that his lock is about to expire and offers to save the page
-  for him.
-- Informs the user that his lock is expired.
-- Includes a test project.
-
-New settings
+Installation
 ============
 
-The following two new settings are added::
-
-	LOCKING = {
-	    'time_until_warning': 15 * 60, # Seconds.
-	    'time_until_expiration': 20 * 60, # Seconds.
-	}
-
-Trying it out
-=============
-
-The following command will clone this fork and run the test project::
-
-    curl https://raw.github.com/runekaagaard/django-locking/master/test_proj/tryme.sh > tryme.sh && sh tryme.sh
-
-Compatibility
-=============
-
-Works well with https://github.com/runekaagaard/django-admin-save-me-genie. If
-you want to use django-extensions ModificationDateTimeField, see https://github.com/stdbrouw/django-locking/issues/6.
+- Add locking to your INSTALLED_APPS.
+- Specify settings #FIXME
+- Static files
+- For any model that requires locking:
+    - Specify locking.models.LockableModel as a model base class.
+    - Specify locking.admin.LockableAdmin as a ModelAdmin base class.
+    - Specify locking.form.LockableForm as a `form` base class of the ModelAdmin.
+    - Add `original_locked_at` and `original_modified_at` into your fields of the ModelAdmin.
+- Call {% locking_variables %} in the change_form.html (or in a parent).
