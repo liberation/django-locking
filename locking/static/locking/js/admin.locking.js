@@ -285,6 +285,7 @@ locking.admin = function() {
                 disable_form();
                 display_islocked(locking.infos);
             } else { // page is not locked for user
+				enable_form();
                 initialize_edit_mode();
             }
         }
