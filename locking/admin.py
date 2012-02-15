@@ -11,7 +11,6 @@ from django.http import HttpResponse
 from django.utils import formats
 
 from locking.models import ObjectLockedError
-from locking import views
 
 class LockableAdmin(admin.ModelAdmin):
     class Media():
