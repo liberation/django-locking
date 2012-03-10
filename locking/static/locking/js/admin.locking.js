@@ -62,17 +62,9 @@ locking.admin = function() {
 	// outside the onready call.
 	try {
 		settings = locking.settings;
-		
-		// Don't lock page if not on change-form page.
-		if (!($("body").hasClass("change-form"))) return;
-		
-		var is_adding_content = function() {
-			return ($.url.segment(3) === 'add' || // On a standard add page.
-					// On a add page handled by the ajax_select app.
-				    $.url.segment(0) === 'ajax_select')
-		};
-		// Don't apply locking when adding content.
-		if (is_adding_content()) return;
+
+		// Don't apply locking mecanism if not on a change form page
+		if (!locking.infos.change) return;
 		
 		// Get url parts.
 		var adminSite = $.url.segment(0)
