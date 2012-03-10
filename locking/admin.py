@@ -113,7 +113,7 @@ class LockableAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change, *args, **kwargs):
         # object creation doesn't need/have locking in place
-        if obj.pk:
+        if not form.is_locking_disabled() and obj.pk:
             obj.unlock_for(request.user)
         super(LockableAdmin, self).save_model(request, obj, form, change, *args, 
                                           **kwargs)

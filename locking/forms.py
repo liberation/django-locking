@@ -13,9 +13,10 @@ class LockableForm(forms.ModelForm):
         super(LockableForm, self).__init__(data=data, files=files, auto_id=auto_id, prefix=prefix,
                  initial=initial, error_class=error_class, label_suffix=label_suffix,
                  empty_permitted=empty_permitted, instance=instance)
+
         if data is None and self.instance.pk is not None:
-            # Since we are in change view and not handling any POST,
-            # try to lock instance
+            # Only try to lock if we are handling an existing object and we
+            # are displaying a change-form (i.e., no POST data is given)
             obj = self.instance
             if not obj.is_locked:
                 obj.lock_for(obj._request_user)
@@ -26,6 +27,13 @@ class LockableForm(forms.ModelForm):
                 # obj is already locked by user, do not refresh lock, user
                 # will be warned that he is probably editing something twice
                 obj._was_already_locked_by_user = True
+                
+    def is_locking_disabled(self):
+        """
+        Extension point to help custom admin apps disable locking in specific
+        circumstances.
+        """
+        return getattr(self, 'disable_locking', False)
 
     def clean(self):
         """
@@ -35,10 +43,13 @@ class LockableForm(forms.ModelForm):
         If something goes wrong, hide a private error flag in the form and
         raise a ValidationError. Private error flag will be used later by JS.
         """
+        if self.is_locking_disabled():
+            return self.cleaned_data
+        
         obj = self.instance
+        original_modified_at = self.cleaned_data['original_modified_at']
+        original_locked_at = self.cleaned_data['original_locked_at']
         if obj.pk is not None:
-            original_modified_at = self.cleaned_data.get('original_modified_at', None)
-            original_locked_at = self.cleaned_data.get('original_locked_at', None)
             if not obj.is_locked:
                 if original_modified_at == obj.modified_at.replace(microsecond=0):
                     # obj was surprisingly not locked by user, but since it has
