@@ -1,5 +1,5 @@
 # coding=utf8
-import simplejson
+from django.utils import simplejson
 from datetime import datetime
 from django.conf.urls.defaults import patterns, url
 from django.contrib import admin
