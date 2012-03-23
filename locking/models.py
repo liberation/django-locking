@@ -95,7 +95,7 @@ class LockableModelMethodsMixin(models.Model):
         
         Don't use hard locks unless you really need them. See :doc:`design`.
         """
-        logger.info("Attempting to initiate a lock for user `%s`" % user)
+        logger.info(u"Attempting to initiate a lock for user `%s`" % user)
 
         if not isinstance(user, auth.User):
             raise ValueError("You should pass a valid auth.User to lock_for.")
@@ -110,7 +110,7 @@ class LockableModelMethodsMixin(models.Model):
                 locked_by=user,
                 hard_lock=hard_lock,
             )
-            logger.info("Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
+            logger.info(u"Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
 
     def unlock(self):
         """
@@ -124,7 +124,7 @@ class LockableModelMethodsMixin(models.Model):
             locked_by=None,
             hard_lock=False,
         )
-        logger.info("Disengaged lock on `%s`" % self)
+        logger.info(u"Disengaged lock on `%s`" % self)
     
     def unlock_for(self, user):
         """
@@ -135,7 +135,7 @@ class LockableModelMethodsMixin(models.Model):
         Will raise a ObjectLockedError exception when the current user isn't authorized to
         unlock the object.
         """
-        logger.info("Attempting to open up a lock on `%s` by user `%s`" % (self, user))
+        logger.info(u"Attempting to open up a lock on `%s` by user `%s`" % (self, user))
     
         # refactor: should raise exceptions instead
         if self.is_locked_by(user):
@@ -149,13 +149,13 @@ class LockableModelMethodsMixin(models.Model):
         ``lock_applies_to`` is used to ascertain whether a user is allowed
         to edit a locked object.
         """
-        logger.info("Checking if the lock on `%s` applies to user `%s`" % (self, user))
+        logger.info(u"Checking if the lock on `%s` applies to user `%s`" % (self, user))
         # a lock does not apply to the person who initiated the lock
         if self.is_locked and self.locked_by != user:
-            logger.info("Lock applies.")
+            logger.info(u"Lock applies.")
             return True
         else:
-            logger.info("Lock does not apply.")
+            logger.info(u"Lock does not apply.")
             return False
     
     def is_locked_by(self, user):
