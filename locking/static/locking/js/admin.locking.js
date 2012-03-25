@@ -85,7 +85,7 @@ locking.admin = function() {
 			is_locked: gettext('This page is locked by <em>%(for_user)s' + 
 				'</em> and editing is disabled. ' +
 				'Ask him/her to release the lock and then try <a href=".">reloading the page</a>.'),
-			editing: gettext('You are in edit mode.'
+			editing: gettext('(you are in edit mode)'
             ),
 			has_expired: gettext('Your lock on this page is expired!' + 
 				' Saving your changes might not be possible, ' + 
@@ -112,6 +112,17 @@ locking.admin = function() {
 			' he/she saves, conflicts may happen.'
             ),
         }
+
+		// Creates empty span after change page title
+		var create_OK_area = function() {
+			$("#content-main").siblings('h1').append(' <span id="locking_ok"></span>');
+		};
+
+        var notify_edit_mode = function() {
+            $('#locking_ok').text(text.editing);
+            // Empty and hide notification area
+            $("#content-main #locking_notification").hide().html('');
+        }
 		
 		// Creates empty div in top of page.
 		var create_notification_area = function() {
@@ -120,7 +131,7 @@ locking.admin = function() {
 		};
 		
 		// Creates errornote div in top of page if it doesn't already exist
-		var create_warning_area = function() {
+		var create_error_area = function() {
             var change_form = $('#' + locking.infos.change_form_id);
             var errornote = $('.errornote', change_form);
             if (errornote.length === 0) {
@@ -136,7 +147,7 @@ locking.admin = function() {
 				                                    .fadeIn('slow', func);
 		};
 
-		var update_warning_area = function(content) {
+		var update_error_area = function(content) {
             var errornote = $('.errornote');
             var lastErrorElm = errornote.siblings(".errorlist");
             if (lastErrorElm.length === 0) {
@@ -206,7 +217,7 @@ locking.admin = function() {
         }
 
         var initialize_edit_mode = function() {
-                update_notification_area(interpolate(text.editing, [locking.infos.original_locked_at]));
+                notify_edit_mode();
 
                 // Warn that lock will expire if he stays too long...
 				locking.delay_execution([
@@ -234,7 +245,7 @@ locking.admin = function() {
                         // force_save is not asked, just enable form
                         initialize_edit_mode();
     					enable_form();
-                        update_notification_area(text.editing);
+                        notify_edit_mode();
                     }
 				} else {
 					locking.error();
@@ -248,7 +259,6 @@ locking.admin = function() {
 			});
 		};
 
-
         // Analyse locking_info and disable form if necessary
         var lock_if_necessary = function() {
             if (locking.infos.is_POST_response && locking.infos.error_when_saving) {
@@ -260,7 +270,7 @@ locking.admin = function() {
                     request_refresh_lock(force_save);
                     return false;
                 });
-    			update_warning_area(interpolate(errors_when_saving[locking.infos.error_when_saving], [locking.infos.for_user]));
+    			update_error_area(interpolate(errors_when_saving[locking.infos.error_when_saving], [locking.infos.for_user]));
                 initialize_edit_mode();
             }
             else if (locking.infos.was_already_locked_by_user) {
@@ -283,8 +293,9 @@ locking.admin = function() {
         }
 		
 		// Initialize.
+		create_OK_area();
 		create_notification_area();
-		create_warning_area();
+		create_error_area();
 		lock_if_necessary();
 		
 	} catch(err) {
