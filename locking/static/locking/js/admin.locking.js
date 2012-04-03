@@ -185,7 +185,6 @@ locking.admin = function() {
 
         // Disables all form elements.
         var disable_form = function() {
-            console.log('disable form');
             $(":input[disabled]", change_form).addClass('_locking_initially_disabled');
             $(":input", change_form).attr("disabled", "disabled");
         };
