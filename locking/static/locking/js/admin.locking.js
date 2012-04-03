@@ -187,12 +187,14 @@ locking.admin = function() {
         var disable_form = function() {
             $(":input[disabled]", change_form).addClass('_locking_initially_disabled');
             $(":input", change_form).attr("disabled", "disabled");
+            change_form.addClass('disabled');
         };
 
         // Enables all form elements that was not disabled from the start.
         var enable_form = function() {
             $(":input", change_form).not('._locking_initially_disabled')
                        .removeAttr("disabled");
+            change_form.removeClass('disabled');
         };
 
         // The user did not save in time, expire the page.
