@@ -63,6 +63,8 @@ locking.admin = function() {
     try {
         settings = locking.settings;
 
+        var change_form = $('#' + locking.infos.change_form_id);
+
         // Don't apply locking mecanism if not on a change form page
         if (!locking.infos.change) return;
 
@@ -132,7 +134,6 @@ locking.admin = function() {
 
         // Creates errornote div in top of page if it doesn't already exist
         var create_error_area = function() {
-            var change_form = $('#' + locking.infos.change_form_id);
             var errornote = $('.errornote', change_form);
             if (errornote.length === 0) {
                 $('<p class="errornote"></p>').prependTo(change_form).hide();
@@ -160,7 +161,7 @@ locking.admin = function() {
         var display_warning = function() {
             var promt_to_save = function() {
                 if (confirm(text.prompt_to_save)) {
-                    $('form input[type=submit][name=_continue]').click();
+                    $('input[type=submit][name=_continue]', change_form).click();
                 }
             }
             var minutes = Math.round((settings.time_until_expiration -
@@ -185,14 +186,13 @@ locking.admin = function() {
         // Disables all form elements.
         var disable_form = function() {
             console.log('disable form');
-            var change_form = $('#' + locking.infos.change_form_id)
             $(":input[disabled]", change_form).addClass('_locking_initially_disabled');
             $(":input", change_form).attr("disabled", "disabled");
         };
 
         // Enables all form elements that was not disabled from the start.
         var enable_form = function() {
-            $(":input").not('._locking_initially_disabled')
+            $(":input", change_form).not('._locking_initially_disabled')
                        .removeAttr("disabled");
         };
 
@@ -228,7 +228,7 @@ locking.admin = function() {
                 $(window).bind('beforeunload', request_unlock);
                 // If user is saving, don't ask for unlocking, it will
                 // be done python-ly
-                $('#' + locking.infos.change_form_id).bind('submit', remove_ajax_unload)
+                change_form.bind('submit', remove_ajax_unload)
         }
 
         var request_refresh_lock = function(force_save) {
@@ -237,10 +237,10 @@ locking.admin = function() {
                     alert("Unable to unlock the object, it is already locked by someone else !");
                     return;
                 } else if (jqXHR.status === 200) {
-                    $('input[name="original_locked_at"]').attr("value", data.original_locked_at);
-                    $('input[name="original_modified_at"]').attr("value", data.original_modified_at);
+                    $('input[name="original_locked_at"]', change_form).attr("value", data.original_locked_at);
+                    $('input[name="original_modified_at"]', change_form).attr("value", data.original_modified_at);
                     if (force_save) {
-                        $('form input[type=submit][name=_continue]').click();
+                        $('input[type=submit][name=_continue]', change_form).click();
                     } else {
                         // force_save is not asked, just enable form
                         initialize_edit_mode();
