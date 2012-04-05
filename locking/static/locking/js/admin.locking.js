@@ -82,36 +82,23 @@ locking.admin = function() {
         };
         // Texts.
         var text = {
-            warn: gettext('Your lock on this page expires in less than %s' +
-                ' minutes. Press save or <a href=".">reload the page</a>.'),
-            is_locked: gettext('This page is locked by <em>%(for_user)s' +
-                '</em> and editing is disabled. ' +
-                'Ask him/her to release the lock and then try <a href=".">reloading the page</a>.'),
+            warn: gettext('Your lock on this page expires in less than %s minutes. Press save or <a href=".">reload the page</a>.'),
+            is_locked: gettext('This page is locked by <em>%(for_user)s</em> and editing is disabled. Ask him/her to release the lock and then try <a href=".">reloading the page</a>.'),
             editing: gettext('(you are in edit mode)'
             ),
-            has_expired: gettext('Your lock on this page is expired!' +
-                ' Saving your changes might not be possible, ' +
-                ' but you are welcome to try.'
+            has_expired: gettext('Your lock on this page is expired! Saving your changes might not be possible, but you are welcome to try.'
             ),
-            was_already_locked: gettext('It appears that you were already editing' +
-                ' this page (maybe in another tab or window ?). If you think this is' +
-                ' a mistake, you can choose to <a href="#force-release" class="force-release">force-release the lock</a>.'
+            was_already_locked: gettext('It appears that you were already editing this page (maybe in another tab or window ?). If you think this is a mistake, you can choose to <a href="#force-release" class="force-release">force-release the lock</a>.'
             ),
             prompt_to_save: 'Do you wish to save the page?',
         };
 
         var errors_when_saving = {
-            was_already_locked: gettext('It appears that you were already editing' +
-                ' this page (maybe in another tab or window ?). If you think this is' +
-                ' a mistake, you can choose to <a href="#force-save" class="force-save">force saving</a>.'
+            was_already_locked: gettext('It appears that you were already editing this page (maybe in another tab or window ?). If you think this is a mistake, you can choose to <a href="#force-save" class="force-save">force saving</a>.'
             ),
-            not_locked_and_modified: gettext('It appears that object was modified since you' +
-                ' extracted it. You can choose to <a href="#force-save" class="force-save">force saving</a>' +
-                ' but you may override some changes...'
+            not_locked_and_modified: gettext('It appears that object was modified since you extracted it. You can choose to <a href="#force-save" class="force-save">force saving</a> but you may override some changes...'
             ),
-            locked_by_someone_else: gettext('%s is editing this object !' +
-            ' Before saving, you need to ask him/her to release the lock. Note that if' +
-            ' he/she saves, conflicts may happen.'
+            locked_by_someone_else: gettext('%s is editing this object ! Before saving, you need to ask him/her to release the lock. Note that if he/she saves, conflicts may happen.'
             ),
         }
 

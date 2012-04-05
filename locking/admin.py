@@ -1,4 +1,4 @@
-# coding=utf8
+# -*- coding: utf-8 -*-
 from django.utils import simplejson
 from datetime import datetime
 from django.conf.urls.defaults import patterns, url
@@ -126,23 +126,21 @@ class LockableAdmin(admin.ModelAdmin):
         return obj
 
     def lock(self, obj):
+        message = ''
         if obj.is_locked:
             seconds_remaining = obj.lock_seconds_remaining
             minutes_remaining = seconds_remaining/60
-            locked_until = _("Still locked for %s minutes by %s") \
-                % (minutes_remaining, obj.locked_by)
             if self.request.user == obj.locked_by:
                 locked_until_self = _("You have a lock on this article for %s more minutes.") \
                     % (minutes_remaining)
-                return '<img src="%slocking/img/page_edit.png" title="%s" />' \
+                message = '<img src="%slocking/img/page_edit.png" title="%s" />' \
                     % (settings.MEDIA_URL, locked_until_self)
             else:
-                locked_until = _("Still locked for %s minutes by %s") \
-                    % (minutes_remaining, obj.locked_by)
-                return '<img src="%slocking/img/lock.png" title="%s" />' \
+                locked_until = _("Still locked for %(minutes)s minutes by %(user)s") \
+                % {"minutes": minutes_remaining, "user": obj.locked_by}
+                message = '<img src="%slocking/img/lock.png" title="%s" />' \
                     % (settings.MEDIA_URL, locked_until)
 
-        else:
-            return ''
+        return message
     lock.allow_tags = True
     list_display = ('__str__', 'lock')
