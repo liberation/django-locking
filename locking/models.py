@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from django.conf import settings
+from django.contrib.auth import models as auth
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 from django.db import models
 from django.db.models.expressions import ExpressionNode
-from django.contrib.auth import models as auth
-from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
+
 from locking import logger
-import managers
+from locking import managers
 
 class ObjectLockedError(IOError):
     pass
 
-class LockableModelFieldsMixin(models.Model):
+class Lock(models.Model):
     """
-    Mixin that holds all fields of final class LockableModel.
+    Model containing the lock informations per object.
     """
-    class Meta:
-        abstract = True
-        
     locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"), 
         null=True,
         editable=False)
@@ -27,6 +28,27 @@ class LockableModelFieldsMixin(models.Model):
         null=True,
         editable=False)
     hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
+    
+    # Content-object field
+    content_type   = models.ForeignKey(ContentType,
+            verbose_name=_('content type'),
+            related_name="content_type_set_for_%(class)s")
+    object_id      = models.TextField(_('object ID'))
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
+
+    def __unicode__(self):
+        return u"Lock for %d/%s" % (self.content_type_id, self.object_id)
+
+class LockableModelFieldsMixin(models.Model):
+    """
+    Mixin that adds modified_at column
+
+    You only have to inherit from it if you don't already have the field on your
+    lockable models.
+    """
+    class Meta:
+        abstract = True
+
     modified_at = models.DateTimeField(
         auto_now=True,
         editable=False,
@@ -42,7 +64,54 @@ class LockableModelMethodsMixin(models.Model):
     """
     class Meta:
         abstract = True
-    
+
+    @property
+    def lock(self):
+        if not hasattr(self, '_lock'):
+            ctypes = ContentType.objects.get_for_model(self)
+            try:
+                self._lock = Lock.objects.get(content_type=ctypes, object_id=str(self.pk))
+            except Lock.DoesNotExist:
+                # If there is no Lock object for this model, create it,
+                # but don't save it yet (it's just here to prevent the db
+                # query next time we need the lock information for this object)
+                self._lock = Lock(content_type=ctypes, object_id=str(self.pk))
+        return self._lock
+
+    @lock.deleter
+    def lock(self):
+        del self._lock
+
+    @property
+    def locked_at(self):
+        if not self.pk:
+            return None
+        return self.lock.locked_at
+
+    @locked_at.setter
+    def locked_at(self, value):
+        self.lock.locked_at = value
+
+    @property
+    def locked_by(self):
+        if not self.pk:
+            return None
+        return self.lock.locked_by
+
+    @locked_by.setter
+    def locked_by(self, value):
+        self.lock.locked_by = value
+
+    @property
+    def hard_lock(self):
+        if not self.pk:
+            return False        
+        return self.lock.hard_lock
+
+    @hard_lock.setter
+    def hard_lock(self, value):
+        self.lock.hard_lock = value
+
     @property
     def lock_type(self):
         """ Returns the type of lock that is currently active. Either
@@ -62,7 +131,8 @@ class LockableModelMethodsMixin(models.Model):
         Works by calculating if the last lock (self.locked_at) has timed out or not.
         """
         if isinstance(self.locked_at, datetime):
-            if (datetime.today() - self.locked_at).seconds < settings.LOCKING['time_until_expiration']:
+            # We're only locked if locked_at is recent enough
+            if self.locked_at > datetime.now() - timedelta(seconds=settings.LOCKING['time_until_expiration']):
                 return True
             else:
                 return False
@@ -80,7 +150,7 @@ class LockableModelMethodsMixin(models.Model):
         If you want to extend a lock beyond its current expiry date, initiate a new
         lock using the ``lock_for`` method.
         """
-        return settings.LOCKING['time_until_expiration'] - (datetime.today() - self.locked_at).seconds
+        return int(settings.LOCKING['time_until_expiration'] - (datetime.now() - self.locked_at).total_seconds())
     
     def lock_for(self, user, hard_lock=False):
         """
@@ -104,12 +174,10 @@ class LockableModelMethodsMixin(models.Model):
             raise ObjectLockedError("This object is already locked by another user. \
                 May not override, except through the `unlock` method.")
         else:
-            update(
-                self,
-                locked_at=datetime.today(),
-                locked_by=user,
-                hard_lock=hard_lock,
-            )
+            self.lock.locked_at = datetime.now()
+            self.lock.locked_by = user
+            self.lock.hard_lock = hard_lock
+            self.lock.save()
             logger.info(u"Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
 
     def unlock(self):
@@ -118,12 +186,9 @@ class LockableModelMethodsMixin(models.Model):
         to do manual lock overrides, even if they haven't initiated these
         locks themselves. Otherwise, use ``unlock_for``.
         """
-        update(
-            self,
-            locked_at=None,
-            locked_by=None,
-            hard_lock=False,
-        )
+        if self.lock.pk:
+            self.lock.delete()
+        del self.lock
         logger.info(u"Disengaged lock on `%s`" % self)
     
     def unlock_for(self, user):
@@ -167,43 +232,15 @@ class LockableModelMethodsMixin(models.Model):
         """
         return user == self.locked_by
     
-    def save(self, *vargs, **kwargs):
-        if self.lock_type == 'hard':
+    def save(self, *args, **kwargs):
+        if self.pk and self.lock_type == 'hard':
             raise ObjectLockedError("""There is currently a hard lock in place. You may not save.
             If you're requesting this save in order to unlock this object for the user who
             initiated the lock, make sure to call `unlock_for` first, with the user as
             the argument.""")
-        
-        super(LockableModelMethodsMixin, self).save(*vargs, **kwargs)
 
+        super(LockableModelMethodsMixin, self).save(*args, **kwargs)
 
 
 class LockableModel(LockableModelFieldsMixin, LockableModelMethodsMixin):
-    """ LockableModel comes with three managers: ``objects``, ``locked`` and 
-    ``unlocked``. They do what you'd expect them to. """
-
-    objects = managers.Manager()
-    locked = managers.LockedManager()
-    unlocked = managers.UnlockedManager()
-
-    class Meta:
-        abstract = True
-    
-
-def update(obj, using=None, **kwargs):
-    # Adapted from http://www.slideshare.net/zeeg/djangocon-2010-scaling-disqus
-    """
-    Updates specified attributes on the current instance.
-
-    This creates an atomic query, circumventing some possible race conditions.
-    """
-    assert obj, "Instance has not yet been created."
-    obj.__class__._base_manager.using(using)\
-            .filter(pk=obj.pk)\
-            .update(**kwargs)
-
-    for k, v in kwargs.items():
-        if isinstance(v, ExpressionNode):
-            # Not implemented.
-            continue
-        setattr(obj, k, v)
+    pass
