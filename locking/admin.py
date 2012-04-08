@@ -41,7 +41,7 @@ class LockableAdmin(admin.ModelAdmin):
                 "count": n, "items": model_ngettext(self.opts, n)
             })
 
-    force_unlock.short_description = ugettext_lazy("Force unlocking selected %(verbose_name_plural)s")
+    force_unlock.short_description = ugettext_lazy("Force unlocking")
 
     def unlock_view(self, request, object_id, extra_context=None):
         obj = self.get_object(request, unquote(object_id))
