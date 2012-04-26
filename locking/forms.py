@@ -43,12 +43,13 @@ class LockableForm(forms.ModelForm):
         If something goes wrong, hide a private error flag in the form and
         raise a ValidationError. Private error flag will be used later by JS.
         """
+        cleaned_data = super(LockableForm, self).clean()
         if self.is_locking_disabled():
-            return self.cleaned_data
+            return cleaned_data
         
         obj = self.instance
-        original_modified_at = self.cleaned_data['original_modified_at']
-        original_locked_at = self.cleaned_data['original_locked_at']
+        original_modified_at = cleaned_data['original_modified_at']
+        original_locked_at = cleaned_data['original_locked_at']
         if obj.pk is not None:
             if not obj.is_locked:
                 if original_modified_at == obj.modified_at.replace(microsecond=0):
@@ -68,4 +69,4 @@ class LockableForm(forms.ModelForm):
                 self._locking_error_when_saving = 'was_already_locked'
                 raise forms.ValidationError('Locking problem !')
 
-        return self.cleaned_data
+        return cleaned_data
