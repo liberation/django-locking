@@ -247,4 +247,5 @@ class LockableModelMethodsMixin(models.Model):
 
 
 class LockableModel(LockableModelFieldsMixin, LockableModelMethodsMixin):
-    pass
+    class Meta:
+        abstract = True
