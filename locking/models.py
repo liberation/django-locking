@@ -19,16 +19,16 @@ class Lock(models.Model):
     """
     Model containing the lock informations per object.
     """
-    locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"), 
+    locked_at = models.DateTimeField(db_column=getattr(settings, "LOCKED_AT_DB_FIELD_NAME", "checked_at"),
         null=True,
         editable=False)
-    locked_by = models.ForeignKey(auth.User, 
+    locked_by = models.ForeignKey(auth.User,
         db_column=getattr(settings, "LOCKED_BY_DB_FIELD_NAME", "checked_by"),
         related_name="working_on_%(class)s",
         null=True,
         editable=False)
     hard_lock = models.BooleanField(db_column='hard_lock', default=False, editable=False)
-    
+
     # Content-object field
     content_type   = models.ForeignKey(ContentType,
             verbose_name=_('content type'),
@@ -109,7 +109,7 @@ class LockableModelMethodsMixin(models.Model):
     @property
     def hard_lock(self):
         if not self.pk:
-            return False        
+            return False
         return self.lock.hard_lock
 
     @hard_lock.setter
@@ -141,39 +141,39 @@ class LockableModelMethodsMixin(models.Model):
             else:
                 return False
         return False
-    
+
     @property
     def lock_seconds_remaining(self):
         """
         A read-only property that returns the amount of seconds remaining before
         any existing lock times out.
-        
+
         May or may not return a negative number if the object is currently unlocked.
         That number represents the amount of seconds since the last lock expired.
-        
+
         If you want to extend a lock beyond its current expiry date, initiate a new
         lock using the ``lock_for`` method.
         """
         return int(settings.LOCKING['time_until_expiration'] - (datetime.now() - self.locked_at).total_seconds())
-    
+
     def lock_for(self, user, hard_lock=False):
         """
-        Together with ``unlock_for`` this is probably the most important method 
-        on this model. If applicable to your use-case, you should lock for a specific 
+        Together with ``unlock_for`` this is probably the most important method
+        on this model. If applicable to your use-case, you should lock for a specific
         user; that way, we can throw an exception when another user tries to unlock
         an object they haven't locked themselves.
-        
+
         When using soft locks (the default), any process can still use the save method
         on this object. If you set ``hard_lock=True``, trying to save an object
         without first unlocking will raise an ``ObjectLockedError``.
-        
+
         Don't use hard locks unless you really need them. See :doc:`design`.
         """
         logger.info(u"Attempting to initiate a lock for user `%s`" % user)
 
         if not isinstance(user, auth.User):
             raise ValueError("You should pass a valid auth.User to lock_for.")
-        
+
         if self.lock_applies_to(user):
             raise ObjectLockedError("This object is already locked by another user. \
                 May not override, except through the `unlock` method.")
@@ -182,7 +182,7 @@ class LockableModelMethodsMixin(models.Model):
             self.lock.locked_by = user
             self.lock.hard_lock = hard_lock
             self.lock.save()
-            logger.info(u"Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))     
+            logger.info(u"Initiated a %s lock for `%s` at %s" % (self.lock_type, self.locked_by, self.locked_at))
 
     def unlock(self):
         """
@@ -194,27 +194,27 @@ class LockableModelMethodsMixin(models.Model):
             self.lock.delete()
         del self.lock
         logger.info(u"Disengaged lock on `%s`" % self)
-    
+
     def unlock_for(self, user):
         """
-        See ``lock_for``. If the lock was initiated for a specific user, 
-        unlocking will fail unless that same user requested the unlocking. 
+        See ``lock_for``. If the lock was initiated for a specific user,
+        unlocking will fail unless that same user requested the unlocking.
         Manual overrides should use the ``unlock`` method instead.
-        
+
         Will raise a ObjectLockedError exception when the current user isn't authorized to
         unlock the object.
         """
         logger.info(u"Attempting to open up a lock on `%s` by user `%s`" % (self, user))
-    
+
         # refactor: should raise exceptions instead
         if self.is_locked_by(user):
             self.unlock()
         else:
             raise ObjectLockedError("Trying to unlock for another user than the one who initiated the currently active lock. This is not allowed. You may want to try a manual override through the `unlock` method instead.")
-    
+
     def lock_applies_to(self, user):
         """
-        A lock does not apply to the user who initiated the lock. Thus, 
+        A lock does not apply to the user who initiated the lock. Thus,
         ``lock_applies_to`` is used to ascertain whether a user is allowed
         to edit a locked object.
         """
@@ -226,16 +226,16 @@ class LockableModelMethodsMixin(models.Model):
         else:
             logger.info(u"Lock does not apply.")
             return False
-    
+
     def is_locked_by(self, user):
         """
         Returns True or False. Can be used to test whether this object is locked by
-        a certain user. The ``lock_applies_to`` method and the ``is_locked`` and 
+        a certain user. The ``lock_applies_to`` method and the ``is_locked`` and
         ``locked_by`` attributes are probably more useful for most intents and
         purposes.
         """
         return user == self.locked_by
-    
+
     def save(self, *args, **kwargs):
         if self.pk and self.lock_type == 'hard':
             raise ObjectLockedError("""There is currently a hard lock in place. You may not save.
