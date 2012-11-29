@@ -59,14 +59,14 @@ class LockableForm(forms.ModelForm):
                     obj.lock_for(obj._request_user)
                 else:
                     self._locking_error_when_saving = 'not_locked_and_modified'
-                    raise forms.ValidationError('Locking problem !')
+                    raise forms.ValidationError('Locking problem ! (Not locked, was modified since)')
             elif not obj.is_locked_by(obj._request_user):
                 # obj is locked by someone else!
                 self._locking_error_when_saving = 'locked_by_someone_else'
-                raise forms.ValidationError('Locking problem !')
+                raise forms.ValidationError('Locking problem ! (Locked by someone else)')
             elif original_locked_at != obj.locked_at.replace(microsecond=0):
                 # obj has been locked by current user in another window!
                 self._locking_error_when_saving = 'was_already_locked'
-                raise forms.ValidationError('Locking problem !')
+                raise forms.ValidationError('Locking problem ! (Was already locked in another window/tab)')
 
         return cleaned_data
