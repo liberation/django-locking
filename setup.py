@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 version = '0.3.0'
-README = os.path.join(os.path.dirname(__file__), 'README')
+README = os.path.join(os.path.dirname(__file__), 'README.rst')
 long_description = open(README).read()
 setup(name='django-locking',
       version=version,
@@ -23,5 +23,5 @@ setup(name='django-locking',
       download_url='http://www.github.com/stdbrouw/django-locking/tarball/master',
       license='BSD',
       packages=find_packages(),
-      install_requires=['django-staticfiles','simplejson'],
+      install_requires=['simplejson'],
       )
