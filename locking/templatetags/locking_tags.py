@@ -6,7 +6,7 @@ from django.utils import simplejson as json
 from django.utils.html import escape
 
 register = template.Library()
-    
+
 @register.inclusion_tag('locking/js_variables.html', takes_context=True)
 def locking_variables(context):
     """
@@ -28,7 +28,7 @@ def locking_variables(context):
         is_POST_response = request.method == 'POST'
         locking_infos = {
             "is_active": original.is_locked,
-            "for_user": escape(getattr(original.locked_by, 'username', '')),
+            "for_user": escape(original.locked_by.get_full_name()),
             "applies": original.lock_applies_to(request.user),
             "change_form_id": "%s_form" % (original._meta.module_name,),
             "was_already_locked_by_user": getattr(original, '_was_already_locked_by_user', False),
